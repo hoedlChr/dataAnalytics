@@ -51,24 +51,40 @@ table(daily$dow)
 m2 = stan_glm(fatalities ~ dow + streams_m, data=daily) # wie viele todesfälle sind am tag der woche und der streams
 print(m2, digits=4) #digits 4 gibt mehr komma stellen aus
 
+# intercept ist der basis fall (bei uns sonntag), uns interessiert nur der median, am sonntag mit 100 Mil. streams sind 116 am montag mit 100 mil. streams 96
+
 # in streams bleibt übrig was sich nicht der wochentage enspricht - sprich die wochentage sind "immer" gleich und grobe veränderungen werden streams zugeschrieben
 
 # Erster Ansatz m1 - todesfälle hängen von wochentage ab (Sontag ist verantwortlich)
 # Zweiter Ansatz m2 - todesfälle pro 100 millionen streams sterben 5 leute weniger
+# über dow sagt man am we sind mehr tote, mit den streams sagt man je mehr streams es sind desto weniger tote (weil die zahl negativ ist)
 
-mean(bayes_R2(m2)) # sagt wie viel von der varianz wird durch das model erklärt (33 Prozent werden durch 2 Variablen erklärt, 70 pro)
+mean(bayes_R2(m2)) # sagt wie viel von der varianz wird durch das model erklärt (33 Prozent werden durch 2 Variablen erklärt, 70 prozent kommt von irgendwo anders her)
+# ^ wie gut erklärt unser model die realität; wenn wir 100 variablen hernehmen können wir nicht 100% erklären
+# ab 50% oder 60% wirds interessant 
 
+
+m3 = stan_glm(fatalities ~ dow + streams_m + holiday + year, data=daily)
+print(m3, digits = 4)
+# weil das jahr eine gruppe ist sieht man mehrere jahre, referenz (intercept): 100 Millionen Streams, Sonntag, im Jahr 2017 
+# Intercept: 110
+# Montag mit <100Mil. streams im jahr 2018 wäre: 110.3 - 21.7 - 2.2
   
   
   
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
+plot(daily$date, daily$fatalities) 
+#^wie schauts covid aus - hatte das auswirkungne
+
+m4 = stan_glm(fatalities ~ dow + new_streams_m + old_streams_m + holiday + year, data=daily)
+print(m4, digits= 4)
+# zweite spalte (MAD_SD) sagt wie die wahrscheinlichkeit verteilt ist
+
+library(daatools)
+
+plotcoef(m4, "beta")
+plothist(m4, "holiday")
+plothist(m4, "new_streams_m", transform=function(x) x*100) # model im median (die mittlereschätzung) ist bei 17.6 bei 100 Millionen Streams, schätzung liegt bei 3.76 und 30.5 (um 95% intervall)
+plothist(m4, "old_streams_m", transform=function(x) x*100) # sind nicht aussage kräftig (es geht von - 8 bis 7), wir können sagen, dass die daten konsistent mit keinem effekt, es wird nicht ausgeschlossen das es keinen effekt gibt
+
+
+mean(bayes_R2(m4)) # das model erklärt 44% der todesfälle
